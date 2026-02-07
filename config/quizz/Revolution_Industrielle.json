@@ -1,0 +1,263 @@
+{
+  "subject": "Révolution Industrielle",
+  "questions": [
+    {
+      "question": "En quelle année la première ligne de chemin de fer ouverte aux voyageurs a-t-elle relié Paris à Saint-Germain ?",
+      "answers": ["1804", "1895", "1837", "1870"],
+      "answer-image": "images/Revolution_Industrielle/question_01.png",
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Qui a perfectionné la machine à vapeur au XVIIIème siècle, permettant les innovations du XIXème ?",
+      "answers": [
+        "Les frères Lumière",
+        "James Watt",
+        "Louis Pasteur",
+        "Aristide Boucicaut"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_02.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quel est le nom du célèbre grand magasin parisien créé par Aristide Boucicaut ?",
+      "answers": [
+        "La Samaritaine",
+        "Au Bonheur des Dames",
+        "Le Bon Marché",
+        "Le Louvre"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_03.png",
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Comment appelle-t-on le départ massif des paysans vers les villes au XIXème siècle ?",
+      "answers": [
+        "L'exode rural",
+        "L'immigration",
+        "L'urbanisme",
+        "La mécanisation"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_04.png",
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quelles sont les deux nouvelles sources d'énergie majeures qui apparaissent ou se développent au XIXème siècle ?",
+      "answers": [
+        "Le bois et le vent",
+        "Le charbon et le pétrole",
+        "Le nucléaire et le gaz",
+        "L'électricité et le bois"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_05.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "En 1895, quelle invention des frères Lumière permet de projeter des images animées ?",
+      "answers": [
+        "Le phonographe",
+        "Le télégraphe",
+        "Le cinématographe",
+        "La photographie"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_06.png",
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "D'après vos documents, quel progrès médical majeur est dû à Louis Pasteur ?",
+      "answers": [
+        "La radioactivité",
+        "L'anesthésie",
+        "La vaccination (contre la rage)",
+        "Le stéthoscope"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_07.png",
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Pourquoi les conditions de travail des vendeurs dans les grands magasins étaient-elles difficiles ?",
+      "answers": [
+        "Ils travaillaient dans le noir complet",
+        "Ils restaient debout plus de 10 heures par jour",
+        "Ils devaient fabriquer les objets eux-mêmes",
+        "Ils n'avaient aucune interaction avec les clients"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_08.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quel auteur a écrit \"Au Bonheur des Dames\" après avoir enquêté sur le Bon Marché ?",
+      "answers": ["Victor Hugo", "Émile Zola", "René Bazin", "Jules Verne"],
+      "answer-image": "images/Revolution_Industrielle/question_09.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quelle invention a permis de diviser par dix la durée des trajets au XIXème siècle ?",
+      "answers": [
+        "Le vélo",
+        "Le carrosse",
+        "Le train (chemin de fer)",
+        "Le métro"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_10.png",
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Dans quel domaine Marie Curie a-t-elle fait d'importantes découvertes ?",
+      "answers": [
+        "L'aviation",
+        "Le téléphone",
+        "La radioactivité",
+        "La machine à coudre"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_11.png",
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Qu'est-ce qui remplace peu à peu le travail manuel des hommes dans les campagnes ?",
+      "answers": [
+        "Les animaux sauvages",
+        "Les machines agricoles (moissonneuse, tracteur...)",
+        "L'arrivée des citadins",
+        "La fermeture des fermes"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_12.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quel avantage social Aristide Boucicaut a-t-il mis en place pour ses employés ?",
+      "answers": [
+        "Le droit de travailler 24h sur 24",
+        "Une caisse de retraite et un médecin permanent",
+        "L'obligation de vivre dans le magasin sans salaire",
+        "Le droit de ne jamais répondre aux clients"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_13.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quelle était la réaction de certains spectateurs lors de la projection de \"L'arrivée d'un train en gare\" en 1896 ?",
+      "answers": [
+        "Ils se sont endormis",
+        "Ils ont cassé l'écran",
+        "Ils furent effrayés",
+        "Ils n'ont rien vu du tout"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_14.png",
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quel moyen de transport urbain apparaît à la fin du XIXème siècle (inauguré en 1900 à Paris) ?",
+      "answers": ["Le paquebot", "Le métro", "La diligence", "Le planeur"],
+      "answer-image": "images/Revolution_Industrielle/question_15.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Qu'est-ce qui a permis le développement touristique de villes comme Arcachon ou Deauville ?",
+      "answers": [
+        "La marche à pied",
+        "Le chemin de fer",
+        "L'invention de la télévision",
+        "La fin de l'école obligatoire"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_16.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quelle méthode publicitaire le Bon Marché utilisait-il pour vendre à l'étranger ?",
+      "answers": [
+        "Des messages sur les réseaux sociaux",
+        "La publicité par affiche ou prospectus",
+        "La radio",
+        "Les spots de pub TV"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_17.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Comment le train a-t-il aidé les agriculteurs du Sud de la France ?",
+      "answers": [
+        "En remplaçant leurs tracteurs",
+        "En leur donnant des billets gratuits",
+        "En vendant leurs produits dans les pays voisins",
+        "En empêchant la pluie de tomber"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_18.png",
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quel type de moteur est utilisé pour l'essor de l'automobile ?",
+      "answers": [
+        "Le moteur à voile",
+        "Le moteur à explosion",
+        "Le moteur à élastique",
+        "Le moteur à eau froide"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_19.png",
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "Quelle invention de Graham Bell a révolutionné le domaine des communications ?",
+      "answers": [
+        "L'imprimerie",
+        "Le cinématographe",
+        "Le téléphone",
+        "L'avion"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_20.png",
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "question": "La naissance des grands magasins parisiens au XIXème siècle a permis :",
+      "answers": [
+        "de vendre des produits moins chers",
+        "de vendre des produits de meilleure qualité",
+        "de vendre des produits plus chers",
+        "de vendre des produits originaux"
+      ],
+      "answer-image": "images/Revolution_Industrielle/question_21.png",
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    }
+  ]
+}
