@@ -1,0 +1,57 @@
+name: Build & Release Artifacts
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build project
+        run: pnpm build
+
+      - name: Archive web/.next
+        run: tar czf web_next_build.tar.gz -C packages/web/.next .
+
+      - name: Archive web/public
+        run: tar czf web_public.tar.gz -C packages/web/public .
+
+      - name: Archive socket/dist
+        run: tar czf socket_dist.tar.gz -C packages/socket/dist .
+
+      - name: Upload web/.next artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: web_next_build.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload web/public artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: web_public.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload socket/dist artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: socket_dist.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

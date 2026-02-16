@@ -1,0 +1,55 @@
+name: Deliver Latest Release Artifacts
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deliver-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download web_next_build artifact from latest release
+        uses: robinraju/release-downloader@v1.10
+        with:
+          repository: Ralex91/Rahoot
+          latest: true
+          fileName: web_next_build.tar.gz
+          out-file-path: .
+
+      - name: Download web_public artifact from latest release
+        uses: robinraju/release-downloader@v1.10
+        with:
+          repository: Ralex91/Rahoot
+          latest: true
+          fileName: web_public.tar.gz
+          out-file-path: .
+
+      - name: Download socket_dist artifact from latest release
+        uses: robinraju/release-downloader@v1.10
+        with:
+          repository: Ralex91/Rahoot
+          latest: true
+          fileName: socket_dist.tar.gz
+          out-file-path: .
+
+      - name: Deliver artifacts to server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ZOZO_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan 192.168.1.184 >> ~/.ssh/known_hosts
+          scp web_next_build.tar.gz web_public.tar.gz socket_dist.tar.gz rousseya@192.168.1.184:/home/rousseya/projects/Rahoot/
+          ssh rousseya@192.168.1.184 '
+            cd /home/rousseya/projects/Rahoot && \
+            tar xzf web_next_build.tar.gz -C packages/web/.next && \
+            tar xzf web_public.tar.gz -C packages/web/public && \
+            tar xzf socket_dist.tar.gz -C packages/socket/dist && \
+            rm web_next_build.tar.gz web_public.tar.gz socket_dist.tar.gz
+          '
+
+      - name: Restart on ZOZO
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ZOZO_SSH_KEY }}
+        run: |
+          ssh rousseya@192.168.1.184 'cd /home/rousseya/projects/Rahoot && ssh 1'
