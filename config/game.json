@@ -1,3 +1,4 @@
 {
-  "managerPassword": "PASSWORD"
+  "managerPassword": "PASSWORD",
+  "managerEmails": ["rousseya@gmail.com"]
 }

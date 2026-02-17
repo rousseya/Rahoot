@@ -21,6 +21,7 @@ type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>
 interface SocketContextValue {
   socket: TypedSocket | null
   webUrl: string | null
+  googleClientId: string | null
   isConnected: boolean
   clientId: string
   connect: () => void
@@ -31,6 +32,7 @@ interface SocketContextValue {
 const SocketContext = createContext<SocketContextValue>({
   socket: null,
   webUrl: null,
+  googleClientId: null,
   isConnected: false,
   clientId: "",
   connect: () => {},
@@ -39,7 +41,9 @@ const SocketContext = createContext<SocketContextValue>({
 })
 
 const getSocketServer = async () =>
-  await ky.get("/env").json<{ webUrl: string; socketUrl: string }>()
+  await ky
+    .get("/env")
+    .json<{ webUrl: string; socketUrl: string; googleClientId: string }>()
 
 const getClientId = (): string => {
   try {
@@ -61,6 +65,7 @@ const getClientId = (): string => {
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<TypedSocket | null>(null)
   const [webUrl, setWebUrl] = useState<string | null>(null)
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [clientId] = useState<string>(() => getClientId())
 
@@ -73,7 +78,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     const initSocket = async () => {
       try {
-        const { webUrl, socketUrl } = await getSocketServer()
+        const { webUrl, socketUrl, googleClientId } = await getSocketServer()
 
         s = io(socketUrl, {
           autoConnect: false,
@@ -83,6 +88,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         })
 
         setWebUrl(webUrl)
+        setGoogleClientId(googleClientId || null)
         setSocket(s)
 
         s.on("connect", () => {
@@ -133,6 +139,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         socket,
         webUrl,
+        googleClientId,
         isConnected,
         clientId,
         connect,

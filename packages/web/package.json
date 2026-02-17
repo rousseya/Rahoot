@@ -10,6 +10,7 @@
   "dependencies": {
     "@rahoot/common": "workspace:*",
     "@rahoot/socket": "workspace:*",
+    "@react-oauth/google": "^0.13.4",
     "@t3-oss/env-nextjs": "^0.13.10",
     "clsx": "^2.1.1",
     "ky": "^1.14.3",

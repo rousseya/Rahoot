@@ -6,6 +6,7 @@ import Game from "@rahoot/socket/services/game";
 import Registry from "@rahoot/socket/services/registry";
 import { withGame } from "@rahoot/socket/utils/game";
 import fs from "fs";
+import { OAuth2Client } from "google-auth-library";
 import { createServer } from "http";
 import { extname, resolve } from "path";
 import { Server as ServerIO } from "socket.io";
@@ -83,6 +84,10 @@ const io: Server = new ServerIO(httpServer, {
 });
 Config.init();
 
+const googleClient = env.GOOGLE_CLIENT_ID
+  ? new OAuth2Client(env.GOOGLE_CLIENT_ID)
+  : null;
+
 const registry = Registry.getInstance();
 const port = 3001;
 
@@ -135,6 +140,43 @@ io.on("connection", (socket) => {
     } catch (error) {
       console.error("Failed to read game config:", error);
       socket.emit("manager:errorMessage", "Failed to read game config");
+    }
+  });
+
+  socket.on("manager:googleAuth", async (credential) => {
+    try {
+      if (!googleClient || !env.GOOGLE_CLIENT_ID) {
+        socket.emit("manager:errorMessage", "Google Sign-In is not configured");
+
+        return;
+      }
+
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+
+      if (!payload?.email) {
+        socket.emit("manager:errorMessage", "Unable to verify Google account");
+
+        return;
+      }
+
+      const config = Config.game();
+      const managerEmails: string[] = config.managerEmails || [];
+
+      if (managerEmails.length > 0 && !managerEmails.includes(payload.email)) {
+        socket.emit("manager:errorMessage", "Unauthorized email address");
+
+        return;
+      }
+
+      socket.emit("manager:quizzList", Config.quizz());
+    } catch (error) {
+      console.error("Google auth failed:", error);
+      socket.emit("manager:errorMessage", "Google authentication failed");
     }
   });
 

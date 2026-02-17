@@ -31,12 +31,17 @@ const Manager = () => {
   const handleAuth = (password: string) => {
     socket?.emit("manager:auth", password)
   }
+  const handleGoogleAuth = (credential: string) => {
+    socket?.emit("manager:googleAuth", credential)
+  }
   const handleCreate = (quizzId: string) => {
     socket?.emit("game:create", quizzId)
   }
 
   if (!isAuth) {
-    return <ManagerPassword onSubmit={handleAuth} />
+    return (
+      <ManagerPassword onSubmit={handleAuth} onGoogleAuth={handleGoogleAuth} />
+    )
   }
 
   return <SelectQuizz quizzList={quizzList} onSelect={handleCreate} />
