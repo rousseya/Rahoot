@@ -1,0 +1,142 @@
+{% extends "base.html" %} {% block content %}
+<section class="relative flex min-h-dvh flex-col items-center justify-center">
+  <div class="absolute h-full w-full overflow-hidden">
+    <div
+      class="bg-primary-15 absolute -top-[15vmin] -left-[15vmin] min-h-[75vmin] min-w-[75vmin] rounded-full"
+    ></div>
+    <div
+      class="bg-primary-15 absolute -right-[15vmin] -bottom-[15vmin] min-h-[75vmin] min-w-[75vmin] rotate-45"
+    ></div>
+  </div>
+
+  <img src="/static/logo.svg" class="mb-6 h-32 relative z-10" alt="QuizRush" />
+
+  <!-- Join form -->
+  <div
+    id="join-form"
+    class="z-10 flex w-full max-w-80 flex-col gap-4 rounded-md bg-white p-4 shadow-sm"
+  >
+    <input
+      id="pin-input"
+      type="text"
+      maxlength="6"
+      class="rounded-sm p-2 text-lg font-semibold outline-2 outline-gray-300"
+      placeholder="PIN Code here"
+    />
+    <button
+      id="join-btn"
+      class="btn-shadow bg-primary rounded-md p-2 text-lg font-semibold text-white"
+    >
+      <span>Join</span>
+    </button>
+  </div>
+
+  <!-- Username form (hidden initially) -->
+  <div
+    id="username-form"
+    class="z-10 hidden w-full max-w-80 flex-col gap-4 rounded-md bg-white p-4 shadow-sm"
+  >
+    <input
+      id="username-input"
+      type="text"
+      maxlength="20"
+      class="rounded-sm p-2 text-lg font-semibold outline-2 outline-gray-300"
+      placeholder="Username here"
+    />
+    <button
+      id="username-btn"
+      class="btn-shadow bg-primary rounded-md p-2 text-lg font-semibold text-white"
+    >
+      <span>Submit</span>
+    </button>
+  </div>
+
+  <p class="z-10 mt-6">
+    <a href="/manager" class="text-white/60 underline hover:text-white"
+      >Manager access</a
+    >
+  </p>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const pinFromUrl = params.get("pin");
+
+    let gameId = null;
+    let username = null;
+
+    function getClientId() {
+      let id = localStorage.getItem("quizrush_client_id");
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem("quizrush_client_id", id);
+      }
+      return id;
+    }
+
+    const clientId = getClientId();
+    const ws = QuizRush.connect(clientId);
+
+    ws.onopen = function () {
+      if (pinFromUrl) {
+        document.getElementById("pin-input").value = pinFromUrl;
+        ws.send(
+          JSON.stringify({ type: "PlayerJoin", invite_code: pinFromUrl }),
+        );
+      }
+    };
+
+    ws.onmessage = function (e) {
+      const msg = JSON.parse(e.data);
+
+      switch (msg.type) {
+        case "SuccessRoom":
+          gameId = msg.game_id;
+          document.getElementById("join-form").classList.add("hidden");
+          document.getElementById("username-form").classList.remove("hidden");
+          document.getElementById("username-form").classList.add("flex");
+          break;
+
+        case "SuccessJoin":
+          gameId = msg.game_id;
+          window.location.href = "/game/" + gameId + "?role=player";
+          break;
+
+        case "ErrorMessage":
+          QuizRush.toast(msg.message, "error");
+          break;
+      }
+    };
+
+    document.getElementById("join-btn").onclick = function () {
+      const pin = document.getElementById("pin-input").value.trim();
+      if (pin.length !== 6) {
+        QuizRush.toast("Please enter a 6-digit PIN", "error");
+        return;
+      }
+      ws.send(JSON.stringify({ type: "PlayerJoin", invite_code: pin }));
+    };
+
+    document.getElementById("pin-input").onkeydown = function (e) {
+      if (e.key === "Enter") document.getElementById("join-btn").click();
+    };
+
+    document.getElementById("username-btn").onclick = function () {
+      username = document.getElementById("username-input").value.trim();
+      if (!gameId) return;
+      ws.send(
+        JSON.stringify({
+          type: "PlayerLogin",
+          game_id: gameId,
+          username: username,
+        }),
+      );
+    };
+
+    document.getElementById("username-input").onkeydown = function (e) {
+      if (e.key === "Enter") document.getElementById("username-btn").click();
+    };
+  })();
+</script>
+{% endblock %}

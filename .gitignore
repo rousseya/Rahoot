@@ -1,4 +1,3 @@
-/node_modules
+/target
 .env
-.secrets
-release.json
+node_modules

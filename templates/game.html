@@ -1,0 +1,778 @@
+{% extends "base.html" %} {% block content %}
+<section
+  id="game-wrapper"
+  class="relative flex min-h-dvh w-full flex-col justify-between"
+>
+  <div class="fixed top-0 left-0 -z-10 h-full w-full bg-orange-600 opacity-70">
+    <img
+      class="pointer-events-none h-full w-full object-cover opacity-60"
+      src="/static/background.webp"
+      alt="background"
+    />
+  </div>
+
+  <!-- Loading state -->
+  <div
+    id="loading-screen"
+    class="flex h-full w-full flex-1 flex-col items-center justify-center"
+  >
+    <img src="/static/loader.svg" class="h-23" alt="loading" />
+    <h1 class="text-4xl font-bold text-white">Connecting...</h1>
+  </div>
+
+  <!-- Game content (hidden initially) -->
+  <div id="game-content" class="hidden flex-1 flex-col justify-between">
+    <!-- Top bar -->
+    <div class="flex w-full justify-between p-4">
+      <div
+        id="question-counter"
+        class="hidden shadow-inset flex items-center rounded-md bg-white p-2 px-4 text-lg font-bold text-black"
+      ></div>
+      <div id="manager-controls" class="hidden">
+        <button
+          id="skip-btn"
+          class="btn-shadow self-end rounded-md bg-white px-4 py-2 text-lg font-bold text-black"
+          onclick="QuizRush.handleSkip()"
+        >
+          <span id="skip-btn-text"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Dynamic game area -->
+    <div id="game-area" class="flex-1 flex flex-col"></div>
+
+    <!-- Player footer (player only) -->
+    <div
+      id="player-footer"
+      class="hidden z-50 items-center justify-between bg-white px-4 py-2 text-lg font-bold"
+    >
+      <p id="footer-username" class="text-gray-800"></p>
+      <div
+        id="footer-points"
+        class="rounded-sm bg-gray-800 px-3 py-1 text-lg text-white"
+      >
+        0
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  (function () {
+    const GAME_ID = "{{ game_id }}";
+    const ROLE = "{{ role }}";
+    const isManager = ROLE === "manager";
+
+    function getClientId() {
+      let id = localStorage.getItem("quizrush_client_id");
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem("quizrush_client_id", id);
+      }
+      return id;
+    }
+
+    const clientId = getClientId();
+    const ws = QuizRush.connect(clientId);
+
+    let currentStatus = null;
+    let players = [];
+    let totalPlayers = 0;
+    let totalAnswers = 0;
+    let username = localStorage.getItem("quizrush_username") || "";
+    let points = 0;
+    let cooldownTimer = null;
+    let musicAudio = null;
+
+    // Sound effects
+    const SFX = {
+      answersMusic: new Audio("/static/sounds/answersMusic.mp3"),
+      answersSound: new Audio("/static/sounds/answersSound.mp3"),
+      results: new Audio("/static/sounds/results.mp3"),
+      show: new Audio("/static/sounds/show.mp3"),
+      boump: new Audio("/static/sounds/boump.mp3"),
+      three: new Audio("/static/sounds/three.mp3"),
+      second: new Audio("/static/sounds/second.mp3"),
+      first: new Audio("/static/sounds/first.mp3"),
+      snearRoll: new Audio("/static/sounds/snearRoll.mp3"),
+    };
+
+    Object.values(SFX).forEach(function (a) {
+      a.volume = 0.2;
+    });
+    SFX.answersSound.volume = 0.1;
+    SFX.show.volume = 0.5;
+
+    function stopMusic() {
+      if (musicAudio) {
+        musicAudio.pause();
+        musicAudio.currentTime = 0;
+        musicAudio = null;
+      }
+    }
+
+    function playMusic(audio, loop_) {
+      stopMusic();
+      audio.loop = !!loop_;
+      audio.currentTime = 0;
+      audio.play().catch(function () {});
+      musicAudio = audio;
+    }
+
+    function showGame() {
+      document.getElementById("loading-screen").classList.add("hidden");
+      document.getElementById("game-content").classList.remove("hidden");
+      document.getElementById("game-content").classList.add("flex");
+
+      if (isManager) {
+        document.getElementById("manager-controls").classList.remove("hidden");
+      } else {
+        document.getElementById("player-footer").classList.remove("hidden");
+        document.getElementById("player-footer").classList.add("flex");
+        document.getElementById("footer-username").textContent = username;
+      }
+    }
+
+    function updateQuestionCounter(current, total) {
+      const el = document.getElementById("question-counter");
+      el.textContent = current + " / " + total;
+      el.classList.remove("hidden");
+    }
+
+    function updatePoints(p) {
+      points = p;
+      document.getElementById("footer-points").textContent = p;
+    }
+
+    function updateSkipButton(status) {
+      const btn = document.getElementById("skip-btn");
+      const map = {
+        SHOW_ROOM: "Start Game",
+        SELECT_ANSWER: "Skip",
+        SHOW_RESPONSES: "Next",
+        SHOW_LEADERBOARD: "Next",
+      };
+      const text = map[status];
+      if (text) {
+        btn.classList.remove("hidden");
+        document.getElementById("skip-btn-text").textContent = text;
+      } else {
+        btn.classList.add("hidden");
+      }
+    }
+
+    const COLORS = [
+      "bg-red-500",
+      "bg-blue-500",
+      "bg-yellow-500",
+      "bg-green-500",
+    ];
+    const ICONS = [
+      '<svg class="h-6 w-6" fill="#FFF" viewBox="0 0 512 512"><polygon points="256 32 20 464 492 464 256 32"/></svg>',
+      '<svg class="h-6 w-6" fill="#FFF" viewBox="-56 -56 625 625" transform="rotate(45)"><rect x="48" y="48" width="416" height="416"/></svg>',
+      '<svg class="h-6 w-6" viewBox="0 0 512 512"><g fill="none"><g fill="#FFF" transform="translate(43,43)"><path d="M213,0C331,0,427,96,427,213S331,427,213,427S0,331,0,213S96,0,213,0Z"/></g></g></svg>',
+      '<svg class="h-6 w-6" fill="#FFF" viewBox="0 0 512 512"><rect x="48" y="48" width="416" height="416"/></svg>',
+    ];
+
+    // ─── Renderers ──────────────────────────────────────────────────
+
+    function renderRoom(data) {
+      const webUrl = window.location.origin;
+      const qrUrl = webUrl + "?pin=" + (data.inviteCode || "");
+
+      return (
+        '<section class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center px-2">' +
+        '<div class="mb-10 flex flex-col-reverse items-center gap-3 md:flex-row md:items-stretch">' +
+        '<div class="flex flex-col gap-3 md:flex-row">' +
+        '<div class="game-pin-out flex flex-col justify-center rounded-md bg-white px-6 py-4">' +
+        '<p class="text-2xl font-bold">Join the game at</p>' +
+        '<p class="w-60 text-lg font-extrabold break-all">' +
+        webUrl +
+        "</p>" +
+        "</div>" +
+        '<div class="game-pin-in flex flex-col justify-center rounded-md bg-white px-6 py-4 text-center md:rounded-l-none md:text-left">' +
+        '<p class="text-2xl font-bold">Game PIN:</p>' +
+        '<p class="text-6xl font-extrabold">' +
+        (data.inviteCode || "") +
+        "</p>" +
+        "</div>" +
+        "</div>" +
+        '<div class="flex h-40 shrink-0 rounded-md bg-white p-2">' +
+        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' +
+        encodeURIComponent(qrUrl) +
+        '" class="h-auto w-auto" alt="QR">' +
+        "</div>" +
+        "</div>" +
+        '<h2 class="mb-4 text-4xl font-bold text-white drop-shadow-lg">' +
+        (data.text || "Waiting for players") +
+        "</h2>" +
+        '<div class="mb-6 flex items-center justify-center rounded-full bg-black/40 px-6 py-3">' +
+        '<span class="text-2xl font-bold text-white drop-shadow-md">Players Joined: <span id="room-total">' +
+        totalPlayers +
+        "</span></span>" +
+        "</div>" +
+        '<div id="player-list" class="flex flex-wrap gap-3"></div>' +
+        "</section>"
+      );
+    }
+
+    function renderPlayerTag(player) {
+      return (
+        '<div class="shadow-inset bg-primary rounded-md px-4 py-3 font-bold text-white cursor-pointer" data-player-id="' +
+        player.id +
+        '" onclick="QuizRush.kickPlayer(\'' +
+        player.id +
+        "')\">" +
+        '<span class="text-3xl drop-shadow-md hover:line-through">' +
+        QuizRush.escapeHtml(player.username) +
+        "</span></div>"
+      );
+    }
+
+    function renderStart(data) {
+      return (
+        '<section class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center">' +
+        '<div id="start-title">' +
+        '<h2 class="anim-show text-center text-3xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">' +
+        QuizRush.escapeHtml(data.subject) +
+        "</h2>" +
+        "</div>" +
+        '<div id="start-countdown" class="hidden relative flex items-center justify-center">' +
+        '<div id="start-shape" class="anim-show bg-primary aspect-square h-32 md:h-60"></div>' +
+        '<span id="start-count" class="absolute text-6xl font-bold text-white drop-shadow-md md:text-8xl"></span>' +
+        "</div>" +
+        "</section>"
+      );
+    }
+
+    function renderPrepared(data) {
+      let btns = "";
+      for (let i = 0; i < data.totalAnswers; i++) {
+        btns +=
+          '<div class="shadow-inset flex aspect-square h-full w-full items-center justify-center rounded-2xl ' +
+          COLORS[i] +
+          '">' +
+          ICONS[i].replace("h-6 w-6", "h-10 md:h-14") +
+          "</div>";
+      }
+      return (
+        '<section class="anim-show relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center">' +
+        '<h2 class="anim-show mb-20 text-center text-3xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">Question #' +
+        data.questionNumber +
+        "</h2>" +
+        '<div class="anim-quizz grid aspect-square w-60 grid-cols-2 gap-4 rounded-2xl bg-gray-700 p-5">' +
+        btns +
+        "</div>" +
+        "</section>"
+      );
+    }
+
+    function renderQuestion(data) {
+      SFX.show.currentTime = 0;
+      SFX.show.play().catch(function () {});
+      let img = data.image
+        ? '<img alt="question" src="' +
+          data.image +
+          '" class="max-h-60 w-auto rounded-md sm:max-h-100">'
+        : "";
+      return (
+        '<section class="relative mx-auto flex h-full w-full max-w-7xl flex-1 flex-col items-center px-4">' +
+        '<div class="flex flex-1 flex-col items-center justify-center gap-5">' +
+        '<h2 class="anim-show text-center text-3xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">' +
+        QuizRush.escapeHtml(data.question) +
+        "</h2>" +
+        img +
+        "</div>" +
+        '<div class="bg-primary mb-20 h-4 self-start justify-self-end rounded-full" style="animation: progressBar ' +
+        data.cooldown +
+        's linear forwards"></div>' +
+        "</section>"
+      );
+    }
+
+    function renderAnswers(data) {
+      if (!data.video && !data.audio) {
+        playMusic(SFX.answersMusic, true);
+      }
+      totalAnswers = 0;
+
+      let media = "";
+      if (data.audio && isManager) {
+        media =
+          '<audio class="m-4 mb-2 w-auto rounded-md" src="' +
+          data.audio +
+          '" autoplay controls></audio>';
+      }
+      if (data.video && isManager) {
+        media =
+          '<video class="m-4 mb-2 aspect-video max-h-60 w-auto rounded-md px-4 sm:max-h-100" src="' +
+          data.video +
+          '" autoplay controls></video>';
+      }
+      let img = data.image
+        ? '<img alt="question" src="' +
+          data.image +
+          '" class="mb-2 max-h-60 w-auto rounded-md px-4 sm:max-h-100">'
+        : "";
+
+      let btns = "";
+      data.answers.forEach(function (answer, i) {
+        btns +=
+          '<button class="shadow-inset flex items-center gap-3 rounded px-4 py-6 text-left ' +
+          COLORS[i] +
+          '"' +
+          ' onclick="QuizRush.selectAnswer(' +
+          i +
+          ')">' +
+          ICONS[i] +
+          '<span class="drop-shadow-md">' +
+          QuizRush.escapeHtml(answer) +
+          "</span></button>";
+      });
+
+      return (
+        '<div class="flex h-full flex-1 flex-col justify-between">' +
+        '<div class="mx-auto inline-flex h-full w-full max-w-7xl flex-1 flex-col items-center justify-center gap-5">' +
+        '<h2 class="text-center text-2xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">' +
+        QuizRush.escapeHtml(data.question) +
+        "</h2>" +
+        media +
+        img +
+        "</div>" +
+        "<div>" +
+        '<div class="mx-auto mb-4 flex w-full max-w-7xl justify-between gap-1 px-2 text-lg font-bold text-white md:text-xl">' +
+        '<div class="flex flex-col items-center rounded-full bg-black/40 px-4 text-lg font-bold">' +
+        '<span class="translate-y-1 text-sm">Time</span><span id="answer-cooldown">' +
+        data.time +
+        "</span></div>" +
+        '<div class="flex flex-col items-center rounded-full bg-black/40 px-4 text-lg font-bold">' +
+        '<span class="translate-y-1 text-sm">Answers</span><span id="answer-count">0/' +
+        data.totalPlayer +
+        "</span></div>" +
+        "</div>" +
+        '<div id="answers-grid" class="mx-auto mb-4 grid w-full max-w-7xl grid-cols-2 gap-1 rounded-full px-2 text-lg font-bold text-white md:text-xl">' +
+        btns +
+        "</div>" +
+        "</div>" +
+        "</div>"
+      );
+    }
+
+    function renderResult(data) {
+      stopMusic();
+      SFX.results.currentTime = 0;
+      SFX.results.play().catch(function () {});
+      updatePoints(data.myPoints);
+
+      let icon;
+      if (!data.answerImage) {
+        if (data.correct) {
+          icon =
+            '<svg class="aspect-square max-h-60 w-full" fill="#22c55e" viewBox="0 0 56 56"><g transform="translate(11.2,11.2) scale(0.6)"><rect width="56" height="56" rx="28" fill="#fff"/></g><path d="M28 51.9C41 51.9 51.9 41 51.9 28S41 4.1 28 4.1 4.1 14.9 4.1 28 14.9 51.9 28 51.9zm-3.2-11.9c-.8 0-1.4-.4-2.1-1.1l-6.7-8.3c-.4-.4-.6-1-.6-1.5 0-1.1.9-2 1.9-2 .7 0 1.2.3 1.8 1l5.6 7.2 10.9-17.5c.4-.7 1.1-1.1 1.7-1.1 1 0 2 .7 2 1.8 0 .5-.3 1.1-.6 1.5L26.8 38.9c-.5.8-1.2 1.1-2 1.1z"/></svg>';
+        } else {
+          icon =
+            '<svg class="aspect-square max-h-60 w-full" fill="#ef4444" viewBox="0 0 56 56"><g transform="translate(12.4,12.4) scale(0.6)"><rect width="56" height="56" rx="28" fill="#fff"/></g><path d="M28 51.9C41 51.9 51.9 41 51.9 28S41 4.1 28 4.1 4.1 14.9 4.1 28 14.9 51.9 28 51.9zm-8.4-13.5c-1.1 0-2-.9-2-2 0-.5.2-1 .6-1.4l7-7-7-7c-.4-.3-.6-.8-.6-1.4 0-1.1.9-2 2-2 .5 0 1 .2 1.4.6l7 7 7.1-7.1c.4-.4.8-.6 1.3-.6 1.1 0 2 .9 2 2 0 .5-.2 1-.6 1.4L30.8 28l7 7c.4.4.6.9.6 1.4 0 1.1-.9 2-2 2-.6 0-1-.2-1.4-.6L28 30.8l-7 7c-.4.4-.9.6-1.4.6z"/></svg>';
+        }
+      } else {
+        icon = "";
+      }
+
+      let ansImg = data.answerImage
+        ? '<img alt="Answer" src="' +
+          data.answerImage +
+          '" class="mt-4 max-h-60 w-auto rounded-md border-4 sm:max-h-80 ' +
+          (data.correct ? "border-green-500" : "border-red-500") +
+          '">'
+        : "";
+
+      let pointsBadge = data.correct
+        ? '<span class="mt-2 rounded bg-black/40 px-4 py-2 text-2xl font-bold text-white drop-shadow-lg">+' +
+          data.points +
+          "</span>"
+        : "";
+
+      return (
+        '<section class="anim-show relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center">' +
+        icon +
+        '<h2 class="mt-1 text-4xl font-bold text-white drop-shadow-lg">' +
+        data.message +
+        "</h2>" +
+        '<p class="mt-1 text-xl font-bold text-white drop-shadow-lg">You are top ' +
+        data.rank +
+        (data.aheadOfMe
+          ? ", behind " + QuizRush.escapeHtml(data.aheadOfMe)
+          : "") +
+        "</p>" +
+        pointsBadge +
+        ansImg +
+        "</section>"
+      );
+    }
+
+    function renderResponses(data) {
+      stopMusic();
+      SFX.results.currentTime = 0;
+      SFX.results.play().catch(function () {});
+
+      let total = 0;
+      Object.values(data.responses || {}).forEach(function (v) {
+        total += v;
+      });
+
+      let bars = "";
+      data.answers.forEach(function (_, i) {
+        let count = data.responses && data.responses[i] ? data.responses[i] : 0;
+        let pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        bars +=
+          '<div class="flex flex-col justify-end self-end overflow-hidden rounded-md ' +
+          COLORS[i] +
+          '" style="height:' +
+          pct +
+          '%">' +
+          '<span class="w-full bg-black/10 text-center text-lg font-bold text-white drop-shadow-md">' +
+          count +
+          "</span></div>";
+      });
+
+      let answerBtns = "";
+      data.answers.forEach(function (answer, i) {
+        let opacity = data.correct !== i ? " opacity-65" : "";
+        answerBtns +=
+          '<div class="shadow-inset flex items-center gap-3 rounded px-4 py-6 text-left ' +
+          COLORS[i] +
+          opacity +
+          '">' +
+          ICONS[i] +
+          '<span class="drop-shadow-md">' +
+          QuizRush.escapeHtml(answer) +
+          "</span></div>";
+      });
+
+      return (
+        '<div class="flex h-full flex-1 flex-col justify-between">' +
+        '<div class="mx-auto inline-flex h-full w-full max-w-7xl flex-1 flex-col items-center justify-center gap-5">' +
+        '<h2 class="text-center text-2xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">' +
+        QuizRush.escapeHtml(data.question) +
+        "</h2>" +
+        '<div class="mt-8 grid h-40 w-full max-w-3xl gap-4 px-2" style="grid-template-columns: repeat(' +
+        data.answers.length +
+        ', 1fr)">' +
+        bars +
+        "</div>" +
+        "</div>" +
+        '<div class="mx-auto mb-4 grid w-full max-w-7xl grid-cols-2 gap-1 rounded-full px-2 text-lg font-bold text-white md:text-xl">' +
+        answerBtns +
+        "</div>" +
+        "</div>"
+      );
+    }
+
+    function renderLeaderboard(data) {
+      let items = "";
+      (data.leaderboard || []).forEach(function (p) {
+        items +=
+          '<div class="bg-primary flex w-full justify-between rounded-md p-3 text-2xl font-bold text-white">' +
+          '<span class="drop-shadow-md">' +
+          QuizRush.escapeHtml(p.username) +
+          "</span>" +
+          '<span class="drop-shadow-md">' +
+          Math.round(p.points) +
+          "</span></div>";
+      });
+      return (
+        '<section class="relative mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center px-2">' +
+        '<h2 class="mb-6 text-5xl font-bold text-white drop-shadow-md">Leaderboard</h2>' +
+        '<div class="flex w-full flex-col gap-2">' +
+        items +
+        "</div>" +
+        "</section>"
+      );
+    }
+
+    function renderPodium(data) {
+      SFX.first.currentTime = 0;
+      SFX.first.play().catch(function () {});
+
+      let top = data.top || [];
+      let cols = top.length;
+
+      function podiumPlace(player, rank, heightPct) {
+        if (!player) return "";
+        let colors = {
+          1: "border-amber-400 bg-amber-300",
+          2: "border-zinc-400 bg-zinc-500",
+          3: "border-amber-800 bg-amber-700",
+        };
+        return (
+          '<div class="z-' +
+          (30 - rank * 10) +
+          ' flex flex-col items-center gap-3" style="height:' +
+          heightPct +
+          '%">' +
+          '<p class="anim-balanced overflow-visible text-center text-2xl font-bold whitespace-nowrap text-white drop-shadow-lg md:text-4xl">' +
+          QuizRush.escapeHtml(player.username) +
+          "</p>" +
+          '<div class="bg-primary flex h-full w-full flex-col items-center gap-4 rounded-t-md pt-6 text-center shadow-2xl">' +
+          '<p class="flex aspect-square h-14 items-center justify-center rounded-full border-4 ' +
+          colors[rank] +
+          ' text-3xl font-bold text-white drop-shadow-lg"><span class="drop-shadow-md">' +
+          rank +
+          "</span></p>" +
+          '<p class="text-2xl font-bold text-white drop-shadow-lg">' +
+          Math.round(player.points) +
+          "</p>" +
+          "</div></div>"
+        );
+      }
+
+      let grid = "";
+      if (top[1]) grid += podiumPlace(top[1], 2, 50);
+      grid += podiumPlace(top[0], 1, 60);
+      if (top[2]) grid += podiumPlace(top[2], 3, 40);
+
+      return (
+        '<section class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-between">' +
+        '<h2 class="anim-show text-center text-3xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">' +
+        QuizRush.escapeHtml(data.subject) +
+        "</h2>" +
+        '<div class="grid w-full max-w-200 flex-1 items-end justify-center overflow-y-hidden" style="grid-template-columns: repeat(' +
+        cols +
+        ', 1fr)">' +
+        grid +
+        "</div>" +
+        "</section>"
+      );
+    }
+
+    function renderWait(data) {
+      return (
+        '<section class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center">' +
+        '<img src="/static/loader.svg" class="h-23" alt="loading">' +
+        '<h2 class="mt-5 text-center text-3xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">' +
+        QuizRush.escapeHtml(data.text || "Waiting...") +
+        "</h2>" +
+        "</section>"
+      );
+    }
+
+    // ─── Status rendering ──────────────────────────────────────────
+
+    function renderStatus(status, data) {
+      currentStatus = status;
+      const area = document.getElementById("game-area");
+
+      stopMusic();
+      if (cooldownTimer) {
+        clearInterval(cooldownTimer);
+        cooldownTimer = null;
+      }
+
+      switch (status) {
+        case "SHOW_ROOM":
+          area.innerHTML = renderRoom(data);
+          break;
+        case "SHOW_START":
+          area.innerHTML = renderStart(data);
+          break;
+        case "SHOW_PREPARED":
+          area.innerHTML = renderPrepared(data);
+          break;
+        case "SHOW_QUESTION":
+          area.innerHTML = renderQuestion(data);
+          break;
+        case "SELECT_ANSWER":
+          area.innerHTML = renderAnswers(data);
+          break;
+        case "SHOW_RESULT":
+          area.innerHTML = renderResult(data);
+          break;
+        case "SHOW_RESPONSES":
+          area.innerHTML = renderResponses(data);
+          break;
+        case "SHOW_LEADERBOARD":
+          area.innerHTML = renderLeaderboard(data);
+          break;
+        case "FINISHED":
+          area.innerHTML = renderPodium(data);
+          break;
+        case "WAIT":
+          area.innerHTML = renderWait(data);
+          break;
+        default:
+          area.innerHTML = renderWait({ text: "Unknown state" });
+          break;
+      }
+
+      if (isManager) updateSkipButton(status);
+    }
+
+    // ─── WebSocket handlers ────────────────────────────────────────
+
+    ws.onopen = function () {
+      if (isManager) {
+        ws.send(JSON.stringify({ type: "ManagerReconnect", game_id: GAME_ID }));
+      } else {
+        ws.send(JSON.stringify({ type: "PlayerReconnect", game_id: GAME_ID }));
+      }
+    };
+
+    ws.onmessage = function (e) {
+      const msg = JSON.parse(e.data);
+
+      switch (msg.type) {
+        case "GameStatus":
+          showGame();
+          renderStatus(msg.status, msg.data);
+          break;
+
+        case "ManagerReconnected":
+          showGame();
+          players = msg.players || [];
+          updateQuestionCounter(
+            msg.current_question.current,
+            msg.current_question.total,
+          );
+          renderStatus(msg.status, msg.data);
+          // Render existing players in room
+          if (msg.status === "SHOW_ROOM") {
+            const list = document.getElementById("player-list");
+            if (list) {
+              list.innerHTML = players.map(renderPlayerTag).join("");
+            }
+          }
+          break;
+
+        case "PlayerReconnected":
+          showGame();
+          username = msg.username;
+          points = msg.points;
+          localStorage.setItem("quizrush_username", username);
+          document.getElementById("footer-username").textContent = username;
+          updatePoints(Math.round(points));
+          updateQuestionCounter(
+            msg.current_question.current,
+            msg.current_question.total,
+          );
+          renderStatus(msg.status, msg.data);
+          break;
+
+        case "TotalPlayers":
+          totalPlayers = msg.count;
+          var tp = document.getElementById("room-total");
+          if (tp) tp.textContent = msg.count;
+          break;
+
+        case "NewPlayer":
+          players.push(msg.player);
+          var pl = document.getElementById("player-list");
+          if (pl) pl.innerHTML += renderPlayerTag(msg.player);
+          break;
+
+        case "RemovePlayer":
+        case "PlayerKicked":
+          var pid = msg.player_id;
+          players = players.filter(function (p) {
+            return p.id !== pid;
+          });
+          var tag = document.querySelector('[data-player-id="' + pid + '"]');
+          if (tag) tag.remove();
+          break;
+
+        case "UpdateQuestion":
+          updateQuestionCounter(msg.current, msg.total);
+          break;
+
+        case "StartCooldown":
+          var title = document.getElementById("start-title");
+          var cd = document.getElementById("start-countdown");
+          if (title) title.classList.add("hidden");
+          if (cd) cd.classList.remove("hidden");
+          SFX.boump.currentTime = 0;
+          SFX.boump.play().catch(function () {});
+          break;
+
+        case "Cooldown":
+          var sc = document.getElementById("start-count");
+          if (sc) {
+            sc.textContent = msg.count;
+            SFX.boump.currentTime = 0;
+            SFX.boump.play().catch(function () {});
+            var shape = document.getElementById("start-shape");
+            if (shape)
+              shape.style.transform = "rotate(" + 45 * (3 - msg.count) + "deg)";
+          }
+          var ac = document.getElementById("answer-cooldown");
+          if (ac) ac.textContent = msg.count;
+          break;
+
+        case "PlayerAnswer":
+          totalAnswers = msg.count;
+          var acEl = document.getElementById("answer-count");
+          if (acEl) acEl.textContent = msg.count + "/" + totalPlayers;
+          SFX.answersSound.currentTime = 0;
+          SFX.answersSound.play().catch(function () {});
+          break;
+
+        case "SuccessJoin":
+          showGame();
+          renderStatus("WAIT", { text: "Waiting for the game to start" });
+          break;
+
+        case "Reset":
+          QuizRush.toast(msg.message, "error");
+          window.location.href = isManager ? "/manager" : "/";
+          break;
+
+        case "ErrorMessage":
+          QuizRush.toast(msg.message, "error");
+          break;
+      }
+    };
+
+    // ─── Global action handlers ─────────────────────────────────────
+
+    QuizRush.selectAnswer = function (key) {
+      ws.send(
+        JSON.stringify({
+          type: "SelectedAnswer",
+          game_id: GAME_ID,
+          answer_key: key,
+        }),
+      );
+      SFX.answersSound.currentTime = 0;
+      SFX.answersSound.play().catch(function () {});
+    };
+
+    QuizRush.handleSkip = function () {
+      switch (currentStatus) {
+        case "SHOW_ROOM":
+          ws.send(JSON.stringify({ type: "StartGame", game_id: GAME_ID }));
+          break;
+        case "SELECT_ANSWER":
+          ws.send(JSON.stringify({ type: "AbortQuiz", game_id: GAME_ID }));
+          break;
+        case "SHOW_RESPONSES":
+          ws.send(
+            JSON.stringify({ type: "ShowLeaderboard", game_id: GAME_ID }),
+          );
+          break;
+        case "SHOW_LEADERBOARD":
+          ws.send(JSON.stringify({ type: "NextQuestion", game_id: GAME_ID }));
+          break;
+      }
+    };
+
+    QuizRush.kickPlayer = function (pid) {
+      if (!isManager) return;
+      ws.send(
+        JSON.stringify({
+          type: "KickPlayer",
+          game_id: GAME_ID,
+          player_id: pid,
+        }),
+      );
+    };
+  })();
+</script>
+{% endblock %}

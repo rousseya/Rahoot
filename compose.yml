@@ -1,13 +1,14 @@
-version: "3.8"
-
 services:
-  rahoot:
-    image: ralex91/rahoot:latest
+  quizrush:
+    build: .
     ports:
       - "3000:3000"
-      - "3001:3001"
     volumes:
-      - ./config:/app/config # Path to your game config
+      - ./config:/app/config
     environment:
-      - WEB_ORIGIN=http://localhost:3000
-      - SOCKET_URL=http://localhost:3001
+      - RUST_LOG=info
+      - HOST=0.0.0.0
+      - PORT=3000
+      - CONFIG_PATH=/app/config
+      - MANAGER_PASSWORD=admin
+    restart: unless-stopped
