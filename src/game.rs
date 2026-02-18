@@ -49,6 +49,9 @@ pub enum GameCommand {
         socket_id: String,
         client_id: String,
     },
+    ManagerDisconnectCheck {
+        game_id: String,
+    },
 }
 
 /// Events broadcast from the game to WebSocket connections.
@@ -317,6 +320,15 @@ async fn game_task(
             }
             GameCommand::ManagerReconnect { socket_id, client_id } => {
                 handle_manager_reconnect(&mut state, &event_tx, &registry, socket_id, client_id);
+            }
+            GameCommand::ManagerDisconnectCheck { game_id } => {
+                if game_id == state.game_id && !state.manager_connected && !state.started {
+                    state.cancel_cooldown();
+                    state.broadcast(&event_tx, ServerMsg::Reset {
+                        message: "Manager disconnected".to_string(),
+                    });
+                    registry.remove_game(&state.game_id);
+                }
             }
         }
     }
@@ -685,7 +697,7 @@ fn handle_player_disconnect(
 
 fn handle_manager_disconnect(
     state: &mut GameState,
-    tx: &broadcast::Sender<GameEvent>,
+    _tx: &broadcast::Sender<GameEvent>,
     registry: &Arc<Registry>,
     socket_id: String,
 ) {
@@ -696,13 +708,19 @@ fn handle_manager_disconnect(
     state.manager_connected = false;
     registry.manager_sockets.remove(&socket_id);
 
-    if !state.started {
-        state.cancel_cooldown();
-        state.broadcast(tx, ServerMsg::Reset {
-            message: "Manager disconnected".to_string(),
-        });
-        registry.remove_game(&state.game_id);
-    }
+    // Schedule delayed cleanup — give the manager time to reconnect
+    // (e.g. during page navigation from /manager to /game/{id})
+    let game_id = state.game_id.clone();
+    let cmd_tx = registry.games.get(&game_id).map(|h| h.cmd_tx.clone());
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        // After 10s, check if manager reconnected by sending a check command
+        if let Some(tx) = cmd_tx {
+            let _ = tx.send(GameCommand::ManagerDisconnectCheck {
+                game_id: game_id.clone(),
+            }).await;
+        }
+    });
 }
 
 fn handle_player_reconnect(

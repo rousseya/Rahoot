@@ -13,8 +13,6 @@ html {
 body {
   min-height: 100dvh;
   overflow-x: hidden;
-  background: #1a140b;
-  color: white;
 }
 input,
 button,

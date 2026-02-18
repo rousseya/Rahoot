@@ -65,7 +65,7 @@ async fn ws_handler(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
-    let client_id = params.get("clientId").cloned().unwrap_or_default();
+    let client_id = params.get("client_id").cloned().unwrap_or_default();
     ws.on_upgrade(move |socket| handle_socket(socket, state, client_id))
 }
 
