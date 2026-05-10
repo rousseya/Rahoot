@@ -8,6 +8,7 @@ import { useEvent, useSocket } from "@rahoot/web/contexts/socketProvider"
 import { useManagerStore } from "@rahoot/web/stores/manager"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import toast from "react-hot-toast"
 
 const Manager = () => {
   const { setGameId, setStatus } = useManagerStore()
@@ -20,6 +21,14 @@ const Manager = () => {
   useEvent("manager:quizzList", (quizzList) => {
     setIsAuth(true)
     setQuizzList(quizzList)
+  })
+
+  useEvent("manager:errorMessage", (message) => {
+    toast.error(message)
+  })
+
+  useEvent("manager:quizzImported", ({ subject }) => {
+    toast.success(`Quizz "${subject}" imported`)
   })
 
   useEvent("manager:gameCreated", ({ gameId, inviteCode }) => {
@@ -38,13 +47,29 @@ const Manager = () => {
     socket?.emit("game:create", quizzId)
   }
 
+  const handleImport = ({
+    fileName,
+    content,
+  }: {
+    fileName: string
+    content: string
+  }) => {
+    socket?.emit("manager:importQuizz", { fileName, content })
+  }
+
   if (!isAuth) {
     return (
       <ManagerPassword onSubmit={handleAuth} onGoogleAuth={handleGoogleAuth} />
     )
   }
 
-  return <SelectQuizz quizzList={quizzList} onSelect={handleCreate} />
+  return (
+    <SelectQuizz
+      quizzList={quizzList}
+      onSelect={handleCreate}
+      onImport={handleImport}
+    />
+  )
 }
 
 export default Manager

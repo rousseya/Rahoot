@@ -1,0 +1,66 @@
+{
+  "subject": "Le Systeme solaire",
+  "questions": [
+    {
+      "question": "Quelle est la planete la plus proche du Soleil ?",
+      "answers": ["Mercure", "Venus", "Terre", "Mars"],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 15
+    },
+    {
+      "question": "Quelle est la plus grande planete du Systeme solaire ?",
+      "answers": ["Saturne", "Jupiter", "Neptune", "Uranus"],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 15
+    },
+    {
+      "question": "Combien de planetes reconnues tournent autour du Soleil ?",
+      "answers": ["7", "8", "9", "10"],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 15
+    },
+    {
+      "question": "Quelle planete est surnommee la planete rouge ?",
+      "answers": ["Venus", "Mars", "Mercure", "Saturne"],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 15
+    },
+    {
+      "question": "Quelle planete possede les anneaux les plus visibles ?",
+      "answers": ["Jupiter", "Saturne", "Uranus", "Neptune"],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 15
+    },
+    {
+      "question": "Quel est le nom de notre galaxie ?",
+      "answers": [
+        "Andromede",
+        "Voie lactee",
+        "Grand Nuage de Magellan",
+        "Orion"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 15
+    },
+    {
+      "question": "Quel astre eclaire principalement la Terre ?",
+      "answers": ["La Lune", "Mars", "Le Soleil", "Venus"],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 15
+    },
+    {
+      "question": "Quelle est la planete la plus eloignee du Soleil ?",
+      "answers": ["Uranus", "Neptune", "Saturne", "Jupiter"],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 15
+    }
+  ]
+}

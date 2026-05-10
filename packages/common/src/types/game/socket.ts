@@ -64,11 +64,16 @@ export interface ServerToClientEvents {
   "manager:removePlayer": (_playerId: string) => void;
   "manager:errorMessage": (_message: string) => void;
   "manager:playerKicked": (_playerId: string) => void;
+  "manager:quizzImported": (_data: { id: string; subject: string }) => void;
 }
 
 export interface ClientToServerEvents {
   // Manager actions
   "game:create": (_quizzId: string) => void;
+  "manager:importQuizz": (_message: {
+    fileName: string;
+    content: string;
+  }) => void;
   "manager:auth": (_password: string) => void;
   "manager:googleAuth": (_credential: string) => void;
   "manager:reconnect": (_message: { gameId: string }) => void;

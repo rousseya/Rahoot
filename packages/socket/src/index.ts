@@ -1,5 +1,6 @@
 import { Server } from "@rahoot/common/types/game/socket";
 import { inviteCodeValidator } from "@rahoot/common/validators/auth";
+import { quizzValidator } from "@rahoot/common/validators/quizz";
 import env from "@rahoot/socket/env";
 import Config from "@rahoot/socket/services/config";
 import Game from "@rahoot/socket/services/game";
@@ -89,12 +90,20 @@ const googleClient = env.GOOGLE_CLIENT_ID
   : null;
 
 const registry = Registry.getInstance();
+const authorizedManagerClientIds = new Set<string>();
 const port = 3001;
 
 console.log(`Socket server running on port ${port}`);
 httpServer.listen(port);
 
 io.on("connection", (socket) => {
+  const authorizeManager = () => {
+    authorizedManagerClientIds.add(socket.handshake.auth.clientId);
+  };
+
+  const isManagerAuthorized = () =>
+    authorizedManagerClientIds.has(socket.handshake.auth.clientId);
+
   console.log(
     `A user connected: socketId: ${socket.id}, clientId: ${socket.handshake.auth.clientId}`,
   );
@@ -136,6 +145,7 @@ io.on("connection", (socket) => {
         return;
       }
 
+      authorizeManager();
       socket.emit("manager:quizzList", Config.quizz());
     } catch (error) {
       console.error("Failed to read game config:", error);
@@ -173,10 +183,45 @@ io.on("connection", (socket) => {
         return;
       }
 
+      authorizeManager();
       socket.emit("manager:quizzList", Config.quizz());
     } catch (error) {
       console.error("Google auth failed:", error);
       socket.emit("manager:errorMessage", "Google authentication failed");
+    }
+  });
+
+  socket.on("manager:importQuizz", ({ fileName, content }) => {
+    if (!isManagerAuthorized()) {
+      socket.emit("manager:errorMessage", "Unauthorized manager action");
+
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(content);
+      const quizzResult = quizzValidator.safeParse(parsed);
+
+      if (!quizzResult.success) {
+        const issue = quizzResult.error.issues[0];
+        socket.emit(
+          "manager:errorMessage",
+          issue?.message || "Invalid quizz format",
+        );
+
+        return;
+      }
+
+      const quizzId = Config.importQuizz(fileName, quizzResult.data);
+
+      socket.emit("manager:quizzImported", {
+        id: quizzId,
+        subject: quizzResult.data.subject,
+      });
+      socket.emit("manager:quizzList", Config.quizz());
+    } catch (error) {
+      console.error("Failed to import quizz:", error);
+      socket.emit("manager:errorMessage", "Invalid JSON file");
     }
   });
 

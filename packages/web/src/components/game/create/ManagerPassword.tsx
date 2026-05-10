@@ -1,7 +1,7 @@
 import Button from "@rahoot/web/components/Button"
 import Form from "@rahoot/web/components/Form"
 import Input from "@rahoot/web/components/Input"
-import { useEvent, useSocket } from "@rahoot/web/contexts/socketProvider"
+import { useSocket } from "@rahoot/web/contexts/socketProvider"
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google"
 import { KeyboardEvent, useState } from "react"
 import toast from "react-hot-toast"
@@ -24,10 +24,6 @@ const ManagerPassword = ({ onSubmit, onGoogleAuth }: Props) => {
       handleSubmit()
     }
   }
-
-  useEvent("manager:errorMessage", (message) => {
-    toast.error(message)
-  })
 
   return (
     <Form>

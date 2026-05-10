@@ -1,4 +1,5 @@
 import { QuizzWithId } from "@rahoot/common/types/game";
+import type { QuizzInput } from "@rahoot/common/validators/quizz";
 import fs from "fs";
 import { resolve } from "path";
 
@@ -10,6 +11,15 @@ const getPath = (path: string = "") =>
     : resolve(process.cwd(), "../../config", path);
 
 class Config {
+  private static toFileId(input: string) {
+    return input
+      .toLowerCase()
+      .trim()
+      .replace(/\.json$/i, "")
+      .replace(/[^a-z0-9-_]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
   static init() {
     const isConfigFolderExists = fs.existsSync(getPath());
 
@@ -125,6 +135,34 @@ class Config {
 
       return [];
     }
+  }
+
+  static importQuizz(fileName: string, quizz: QuizzInput) {
+    const quizzFolderPath = getPath("quizz");
+
+    if (!fs.existsSync(quizzFolderPath)) {
+      fs.mkdirSync(quizzFolderPath, { recursive: true });
+    }
+
+    const fileNameId = this.toFileId(fileName);
+    const subjectId = this.toFileId(quizz.subject);
+
+    const baseId = fileNameId || subjectId || `quizz_${Date.now()}`;
+
+    let quizzId = baseId;
+    let suffix = 1;
+
+    while (fs.existsSync(getPath(`quizz/${quizzId}.json`))) {
+      quizzId = `${baseId}_${suffix}`;
+      suffix += 1;
+    }
+
+    fs.writeFileSync(
+      getPath(`quizz/${quizzId}.json`),
+      JSON.stringify(quizz, null, 2),
+    );
+
+    return quizzId;
   }
 }
 

@@ -1,16 +1,22 @@
 import { QuizzWithId } from "@rahoot/common/types/game"
 import Button from "@rahoot/web/components/Button"
 import clsx from "clsx"
-import { useState } from "react"
+import { ChangeEvent, useRef, useState } from "react"
 import toast from "react-hot-toast"
 
 type Props = {
   quizzList: QuizzWithId[]
   onSelect: (_id: string) => void
+  onImport: (_data: {
+    fileName: string
+    content: string
+  }) => void | Promise<void>
 }
 
-const SelectQuizz = ({ quizzList, onSelect }: Props) => {
+const SelectQuizz = ({ quizzList, onSelect, onImport }: Props) => {
   const [selected, setSelected] = useState<string | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSelect = (id: string) => () => {
     if (selected === id) {
@@ -28,6 +34,41 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
     }
 
     onSelect(selected)
+  }
+
+  const handleOpenImport = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      return
+    }
+
+    if (!file.name.toLowerCase().endsWith(".json")) {
+      toast.error("Please import a JSON file")
+      event.target.value = ""
+
+      return
+    }
+
+    try {
+      setIsImporting(true)
+      const content = await file.text()
+
+      await onImport({
+        fileName: file.name,
+        content,
+      })
+    } catch (error) {
+      console.error("Failed to import quizz:", error)
+      toast.error("Failed to import quizz")
+    } finally {
+      setIsImporting(false)
+      event.target.value = ""
+    }
   }
 
   return (
@@ -56,6 +97,20 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
           ))}
         </div>
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={handleImport}
+      />
+      <Button
+        onClick={handleOpenImport}
+        className="bg-gray-200 text-gray-800"
+        disabled={isImporting}
+      >
+        {isImporting ? "Importing..." : "Import quizz"}
+      </Button>
       <Button onClick={handleSubmit}>Submit</Button>
     </div>
   )
