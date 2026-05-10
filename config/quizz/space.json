@@ -1,0 +1,53 @@
+{
+  "subject": "Les missions spatiales historiques",
+  "questions": [
+    {
+      "question": "Quelle mission a permis au premier homme de marcher sur la Lune en 1969 ?",
+      "answers": ["Apollo 11", "Apollo 13", "Gemini 8", "Vostok 1"],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20,
+      "image": "https://images.unsplash.com/photo-1541185933-ef5d8ed016c2?auto=format&fit=crop&w=800"
+    },
+    {
+      "question": "Qui était le premier être humain à voyager dans l'espace lors de la mission Vostok 1 ?",
+      "answers": ["Neil Armstrong", "Buzz Aldrin", "Youri Gagarine", "John Glenn"],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 15,
+      "image": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=800"
+    },
+    {
+      "question": "Quel télescope spatial, lancé en 1990, a révolutionné notre vision de l'univers ?",
+      "answers": ["James Webb", "Hubble", "Kepler", "Spitzer"],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 15,
+      "image": "https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?auto=format&fit=crop&w=800"
+    },
+    {
+      "question": "Quelle sonde a survolé Pluton pour la première fois en 2015 ?",
+      "answers": ["Voyager 1", "Cassini", "New Horizons", "Rosetta"],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "image": "https://images.unsplash.com/photo-1614332287897-cdc485fa562d?auto=format&fit=crop&w=800"
+    },
+    {
+      "question": "Comment s'appelait le premier satellite artificiel lancé par l'URSS en 1957 ?",
+      "answers": ["Sputnik 1", "Explorer 1", "Luna 1", "Vanguard 1"],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 15,
+      "image": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800"
+    },
+    {
+      "question": "Quelle mission a réussi l'exploit de poser le petit robot Philae sur une comète ?",
+      "answers": ["Stardust", "Rosetta", "Hayabusa", "Deep Impact"],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "image": "https://images.unsplash.com/photo-1446776877081-d282a0f896e2?auto=format&fit=crop&w=800"
+    }
+  ]
+}
