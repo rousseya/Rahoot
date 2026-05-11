@@ -52,3 +52,61 @@ gh pr create --base main --head image-answers --fill
 If GitHub CLI is not installed, open this in your browser after push:
 
 https://github.com/ziv-airis/Rahoot/compare/main...image-answers
+
+# Secrets Security (ZOZO)
+
+Goal: ensure Hugging Face tokens stay private and are never exposed to users.
+
+## Required permissions
+
+On ZOZO, the runtime secret file must be readable only by the service user:
+
+```bash
+ssh rousseya@192.168.1.184
+chmod 600 /home/rousseya/Rahoot/.env
+chmod 700 /home/rousseya/Rahoot/start.sh
+ls -l /home/rousseya/Rahoot/.env /home/rousseya/Rahoot/start.sh
+```
+
+Expected:
+
+- `.env` -> `-rw-------` (600)
+- `start.sh` -> `-rwx------` (700)
+
+## Public exposure checks
+
+Verify secrets are not served by the web app:
+
+```bash
+curl -i http://127.0.0.1:4000/.env
+curl -s http://127.0.0.1:4000/env
+```
+
+Expected:
+
+- `/.env` returns `404`
+- `/env` returns only safe public values (`webUrl`, `socketUrl`, `googleClientId`)
+
+## Logging checks
+
+Verify the service logs do not contain token values:
+
+```bash
+journalctl -u rahoot --no-pager -n 400 | grep -E "HUGGINGFACE_TOKEN|HF_TOKEN|Authorization: Bearer|Bearer [A-Za-z0-9_-]{10,}" -n || true
+```
+
+Expected: no match.
+
+## Git safety
+
+Never commit runtime secrets:
+
+- `.env` must stay untracked (`.gitignore` includes `.env`)
+- only `.env.example` is versioned
+
+If a token is ever exposed in logs, terminal history, or screenshots:
+
+1. Revoke it in Hugging Face immediately.
+2. Generate a new token.
+3. Update local and ZOZO `.env`.
+4. Restart `rahoot`.
