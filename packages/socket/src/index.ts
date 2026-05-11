@@ -225,6 +225,54 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("manager:saveQuizz", ({ id, quizz }, callback) => {
+    if (!isManagerAuthorized()) {
+      socket.emit("manager:errorMessage", "Unauthorized manager action");
+
+      return;
+    }
+
+    const result = quizzValidator.safeParse(quizz);
+
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      socket.emit(
+        "manager:errorMessage",
+        issue?.message || "Invalid quizz format",
+      );
+
+      return;
+    }
+
+    const quizzId = Config.saveQuizz(id, result.data);
+
+    socket.emit("manager:quizzSaved", {
+      id: quizzId,
+      subject: result.data.subject,
+    });
+    socket.emit("manager:quizzList", Config.quizz());
+    callback({ id: quizzId, subject: result.data.subject });
+  });
+
+  socket.on("manager:deleteQuizz", ({ id }) => {
+    if (!isManagerAuthorized()) {
+      socket.emit("manager:errorMessage", "Unauthorized manager action");
+
+      return;
+    }
+
+    const deleted = Config.deleteQuizz(id);
+
+    if (!deleted) {
+      socket.emit("manager:errorMessage", "Quizz not found");
+
+      return;
+    }
+
+    socket.emit("manager:quizzDeleted", { id });
+    socket.emit("manager:quizzList", Config.quizz());
+  });
+
   socket.on("game:create", (quizzId) => {
     const quizzList = Config.quizz();
     const quizz = quizzList.find((q) => q.id === quizzId);

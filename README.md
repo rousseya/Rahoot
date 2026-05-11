@@ -155,6 +155,16 @@ Quiz Options:
   - `cooldown`: Time in seconds before showing the question
   - `time`: Time in seconds allowed to answer
 
+### 3. Quiz Studio & AI assistance
+
+The manager section also includes a Quiz Studio to create, edit and preview quizzes directly in the browser.
+
+If you want AI help for drafting questions or generating images, set these environment variables:
+
+- `HUGGINGFACE_TOKEN`
+- `HUGGINGFACE_TEXT_MODEL`
+- `HUGGINGFACE_IMAGE_MODEL`
+
 ## 🎮 How to Play
 
 1. Access the manager interface at http://localhost:3000/manager

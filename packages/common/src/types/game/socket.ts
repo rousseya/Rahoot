@@ -65,6 +65,8 @@ export interface ServerToClientEvents {
   "manager:errorMessage": (_message: string) => void;
   "manager:playerKicked": (_playerId: string) => void;
   "manager:quizzImported": (_data: { id: string; subject: string }) => void;
+  "manager:quizzSaved": (_data: { id: string; subject: string }) => void;
+  "manager:quizzDeleted": (_data: { id: string }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -74,6 +76,27 @@ export interface ClientToServerEvents {
     fileName: string;
     content: string;
   }) => void;
+  "manager:saveQuizz": (
+    _message: {
+      id?: string;
+      quizz: {
+        subject: string;
+        questions: {
+          question: string;
+          image?: string;
+          video?: string;
+          audio?: string;
+          "answer-image"?: string;
+          answers: string[];
+          solution: number;
+          cooldown: number;
+          time: number;
+        }[];
+      };
+    },
+    _callback: (_data: { id: string; subject: string }) => void,
+  ) => void;
+  "manager:deleteQuizz": (_message: { id: string }) => void;
   "manager:auth": (_password: string) => void;
   "manager:googleAuth": (_credential: string) => void;
   "manager:reconnect": (_message: { gameId: string }) => void;

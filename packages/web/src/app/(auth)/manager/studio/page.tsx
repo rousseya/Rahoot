@@ -2,16 +2,30 @@
 
 import { QuizzWithId } from "@rahoot/common/types/game"
 import { STATUS } from "@rahoot/common/types/game/status"
-import Button from "@rahoot/web/components/Button"
 import ManagerPassword from "@rahoot/web/components/game/create/ManagerPassword"
-import SelectQuizz from "@rahoot/web/components/game/create/SelectQuizz"
+import QuizStudio from "@rahoot/web/components/quiz/QuizStudio"
 import { useEvent, useSocket } from "@rahoot/web/contexts/socketProvider"
 import { useManagerStore } from "@rahoot/web/stores/manager"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
 
-const Manager = () => {
+type EditableQuizz = {
+  subject: string
+  questions: {
+    question: string
+    image?: string
+    video?: string
+    audio?: string
+    "answer-image"?: string
+    answers: string[]
+    solution: number
+    cooldown: number
+    time: number
+  }[]
+}
+
+const ManagerStudio = () => {
   const { setGameId, setStatus } = useManagerStore()
   const router = useRouter()
   const { socket } = useSocket()
@@ -19,13 +33,21 @@ const Manager = () => {
   const [isAuth, setIsAuth] = useState(false)
   const [quizzList, setQuizzList] = useState<QuizzWithId[]>([])
 
-  useEvent("manager:quizzList", (quizzList) => {
+  useEvent("manager:quizzList", (nextQuizzList) => {
     setIsAuth(true)
-    setQuizzList(quizzList)
+    setQuizzList(nextQuizzList)
   })
 
   useEvent("manager:errorMessage", (message) => {
     toast.error(message)
+  })
+
+  useEvent("manager:quizzSaved", ({ subject }) => {
+    toast.success(`Quizz "${subject}" saved`)
+  })
+
+  useEvent("manager:quizzDeleted", ({ id }) => {
+    toast.success(`Quizz "${id}" deleted`)
   })
 
   useEvent("manager:quizzImported", ({ subject }) => {
@@ -41,25 +63,31 @@ const Manager = () => {
   const handleAuth = (password: string) => {
     socket?.emit("manager:auth", password)
   }
+
   const handleGoogleAuth = (credential: string) => {
     socket?.emit("manager:googleAuth", credential)
   }
-  const handleCreate = (quizzId: string) => {
-    socket?.emit("game:create", quizzId)
-  }
 
-  const handleOpenStudio = () => {
-    router.push("/manager/studio")
-  }
-
-  const handleImport = ({
-    fileName,
-    content,
+  const handleSave = async ({
+    id,
+    quizz,
   }: {
-    fileName: string
-    content: string
+    id?: string
+    quizz: EditableQuizz
   }) => {
-    socket?.emit("manager:importQuizz", { fileName, content })
+    return await new Promise<string | void>((resolve, reject) => {
+      socket?.emit("manager:saveQuizz", { id, quizz }, ({ id: savedId }) => {
+        resolve(savedId)
+      })
+
+      if (!socket) {
+        reject(new Error("Socket not available"))
+      }
+    })
+  }
+
+  const handleDelete = async (id: string) => {
+    socket?.emit("manager:deleteQuizz", { id })
   }
 
   if (!isAuth) {
@@ -69,17 +97,12 @@ const Manager = () => {
   }
 
   return (
-    <div className="flex w-full max-w-md flex-col gap-4">
-      <Button onClick={handleOpenStudio} className="bg-gray-200 text-gray-800">
-        Open quiz studio
-      </Button>
-      <SelectQuizz
-        quizzList={quizzList}
-        onSelect={handleCreate}
-        onImport={handleImport}
-      />
-    </div>
+    <QuizStudio
+      quizzList={quizzList}
+      onSave={handleSave}
+      onDelete={handleDelete}
+    />
   )
 }
 
-export default Manager
+export default ManagerStudio

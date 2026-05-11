@@ -138,23 +138,65 @@ class Config {
   }
 
   static importQuizz(fileName: string, quizz: QuizzInput) {
+    return this.writeQuizz(fileName, quizz, false);
+  }
+
+  static saveQuizz(id: string | undefined, quizz: QuizzInput) {
+    return this.writeQuizz(id, quizz, true);
+  }
+
+  static deleteQuizz(id: string) {
+    const filePath = getPath(`quizz/${this.toFileId(id)}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return false;
+    }
+
+    fs.unlinkSync(filePath);
+
+    return true;
+  }
+
+  static getQuizz(id: string) {
+    const filePath = getPath(`quizz/${this.toFileId(id)}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+
+    const data = fs.readFileSync(filePath, "utf-8");
+    const quizz = JSON.parse(data) as QuizzInput;
+
+    return {
+      id: this.toFileId(id),
+      ...quizz,
+    };
+  }
+
+  private static writeQuizz(
+    id: string | undefined,
+    quizz: QuizzInput,
+    overwriteExisting: boolean,
+  ) {
     const quizzFolderPath = getPath("quizz");
 
     if (!fs.existsSync(quizzFolderPath)) {
       fs.mkdirSync(quizzFolderPath, { recursive: true });
     }
 
-    const fileNameId = this.toFileId(fileName);
+    const fileNameId = this.toFileId(id || "");
     const subjectId = this.toFileId(quizz.subject);
 
-    const baseId = fileNameId || subjectId || `quizz_${Date.now()}`;
+    let quizzId = fileNameId || subjectId || `quizz_${Date.now()}`;
 
-    let quizzId = baseId;
-    let suffix = 1;
+    if (!overwriteExisting) {
+      const baseId = quizzId;
+      let suffix = 1;
 
-    while (fs.existsSync(getPath(`quizz/${quizzId}.json`))) {
-      quizzId = `${baseId}_${suffix}`;
-      suffix += 1;
+      while (fs.existsSync(getPath(`quizz/${quizzId}.json`))) {
+        quizzId = `${baseId}_${suffix}`;
+        suffix += 1;
+      }
     }
 
     fs.writeFileSync(
