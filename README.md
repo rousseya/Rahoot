@@ -124,6 +124,8 @@ Options:
 
 Create your quiz files in the `config/quizz/` directory. You can have multiple quiz files and select which one to use when starting a game.
 
+For the complete format and validation rules, see [QUIZ_JSON_FORMAT.md](QUIZ_JSON_FORMAT.md).
+
 Example quiz configuration (`config/quizz/example.json`):
 
 ```json
