@@ -2,8 +2,9 @@
 
 import { QuizzWithId } from "@rahoot/common/types/game"
 import Button from "@rahoot/web/components/Button"
+import { useSocket } from "@rahoot/web/contexts/socketProvider"
 import clsx from "clsx"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 
 type EditableQuestion = {
@@ -53,6 +54,7 @@ const createBlankQuizz = (): string =>
 const toPrettyJson = (value: unknown) => JSON.stringify(value, null, 2)
 
 const QuizStudio = ({ quizzList, onSave, onDelete }: Props) => {
+  const { socketUrl } = useSocket()
   const [selectedId, setSelectedId] = useState<string | null>(
     quizzList[0]?.id ?? null,
   )
@@ -65,6 +67,11 @@ const QuizStudio = ({ quizzList, onSave, onDelete }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDrafting, setIsDrafting] = useState(false)
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
+  const [isJsonFocusFlash, setIsJsonFocusFlash] = useState(false)
+  const jsonEditorRef = useRef<HTMLTextAreaElement>(null)
+  const focusFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
 
   useEffect(() => {
     if (selectedId) {
@@ -88,6 +95,15 @@ const QuizStudio = ({ quizzList, onSave, onDelete }: Props) => {
     }
   }, [quizzList, selectedId])
 
+  useEffect(
+    () => () => {
+      if (focusFlashTimeoutRef.current) {
+        clearTimeout(focusFlashTimeoutRef.current)
+      }
+    },
+    [],
+  )
+
   let parsedQuizz: EditableQuizz | null = null
   let parseError: string | null = null
 
@@ -100,6 +116,85 @@ const QuizStudio = ({ quizzList, onSave, onDelete }: Props) => {
   const questions = parsedQuizz?.questions ?? []
   const selectedQuestion =
     questions[selectedQuestionIndex] ?? questions[0] ?? null
+
+  const resolvePreviewImageUrl = (value?: string) => {
+    if (!value) {
+      return undefined
+    }
+
+    if (
+      value.startsWith("http://") ||
+      value.startsWith("https://") ||
+      value.startsWith("data:") ||
+      value.startsWith("blob:") ||
+      value.startsWith("/")
+    ) {
+      return value
+    }
+
+    if (value.startsWith("images/") && socketUrl) {
+      return `${socketUrl.replace(/\/+$/, "")}/${value}`
+    }
+
+    return value
+  }
+
+  const findQuestionPosition = (source: string, questionIndex: number) => {
+    const questionsStart = source.search(/"questions"\s*:\s*\[/)
+
+    if (questionsStart < 0) {
+      return null
+    }
+
+    const searchArea = source.slice(questionsStart)
+    const questionKeyRegex = /"question"\s*:/g
+    let match: RegExpExecArray | null = null
+    let currentIndex = -1
+
+    while ((match = questionKeyRegex.exec(searchArea)) !== null) {
+      currentIndex += 1
+
+      if (currentIndex === questionIndex) {
+        return questionsStart + match.index
+      }
+    }
+
+    return null
+  }
+
+  const focusQuestionInJson = (questionIndex: number) => {
+    const editor = jsonEditorRef.current
+
+    if (!editor) {
+      return
+    }
+
+    const position = findQuestionPosition(jsonText, questionIndex)
+
+    if (position === null) {
+      return
+    }
+
+    requestAnimationFrame(() => {
+      editor.focus()
+      editor.setSelectionRange(position, position)
+    })
+  }
+
+  const handleSelectQuestion = (questionIndex: number) => {
+    setSelectedQuestionIndex(questionIndex)
+    focusQuestionInJson(questionIndex)
+
+    setIsJsonFocusFlash(true)
+
+    if (focusFlashTimeoutRef.current) {
+      clearTimeout(focusFlashTimeoutRef.current)
+    }
+
+    focusFlashTimeoutRef.current = setTimeout(() => {
+      setIsJsonFocusFlash(false)
+    }, 1200)
+  }
 
   const selectQuizz = (quizz: QuizzWithId) => {
     setSelectedId(quizz.id)
@@ -350,14 +445,74 @@ const QuizStudio = ({ quizzList, onSave, onDelete }: Props) => {
 
           <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="flex flex-col gap-2">
+              {selectedQuestion ? (
+                <div className="mx-auto mb-2 w-full max-w-2xl rounded-md border border-gray-200 p-4">
+                  <h3 className="mb-2 text-center text-base font-semibold">
+                    Selected question preview
+                  </h3>
+                  <p className="text-center font-medium text-gray-800">
+                    {selectedQuestion.question || "Untitled question"}
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {selectedQuestion.answers.map((answer, index) => (
+                      <div
+                        key={`${answer}-${index}`}
+                        className={clsx(
+                          "rounded-md border px-3 py-2 text-sm",
+                          selectedQuestion.solution === index
+                            ? "border-green-500 bg-green-50"
+                            : "border-gray-200",
+                        )}
+                      >
+                        {answer || "(empty answer)"}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 text-center text-sm text-gray-500">
+                    Cooldown: {selectedQuestion.cooldown}s · Time:{" "}
+                    {selectedQuestion.time}s
+                  </div>
+                  {selectedQuestion.image && (
+                    <img
+                      src={resolvePreviewImageUrl(selectedQuestion.image)}
+                      alt={selectedQuestion.question}
+                      className="mx-auto mt-3 w-full max-w-xl rounded-md border border-gray-200 object-cover"
+                    />
+                  )}
+                  {selectedQuestion["answer-image"] && (
+                    <div className="mt-3">
+                      <p className="mb-2 text-center text-sm font-medium text-gray-600">
+                        Answer image preview
+                      </p>
+                      <img
+                        src={resolvePreviewImageUrl(
+                          selectedQuestion["answer-image"],
+                        )}
+                        alt={`Answer for ${selectedQuestion.question || "question"}`}
+                        className="mx-auto w-full max-w-xl rounded-md border border-gray-200 object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mx-auto mb-2 w-full max-w-2xl rounded-md border border-dashed border-gray-300 p-4 text-center text-sm text-gray-500">
+                  No question selected.
+                </div>
+              )}
+
               <label className="text-sm font-semibold text-gray-600">
                 Quiz JSON
               </label>
               <textarea
+                ref={jsonEditorRef}
                 value={jsonText}
                 onChange={(event) => setJsonText(event.target.value)}
                 spellCheck={false}
-                className="focus:border-primary min-h-[42rem] w-full rounded-md border border-gray-300 bg-gray-50 p-4 font-mono text-sm transition outline-none"
+                className={clsx(
+                  "focus:border-primary min-h-[42rem] w-full rounded-md border border-gray-300 bg-gray-50 p-4 font-mono text-sm transition outline-none",
+                  isJsonFocusFlash &&
+                    "ring-primary/60 border-primary ring-2 ring-offset-2",
+                )}
               />
               {parseError && (
                 <p className="text-sm text-red-600">JSON error: {parseError}</p>
@@ -378,7 +533,7 @@ const QuizStudio = ({ quizzList, onSave, onDelete }: Props) => {
                 {questions.map((question, index) => (
                   <button
                     key={`${question.question}-${index}`}
-                    onClick={() => setSelectedQuestionIndex(index)}
+                    onClick={() => handleSelectQuestion(index)}
                     className={clsx(
                       "w-full rounded-md border p-3 text-left transition",
                       selectedQuestionIndex === index
@@ -400,47 +555,6 @@ const QuizStudio = ({ quizzList, onSave, onDelete }: Props) => {
                   </button>
                 ))}
               </div>
-
-              {selectedQuestion ? (
-                <div className="rounded-md border border-gray-200 p-4">
-                  <h3 className="mb-2 text-base font-semibold">
-                    Selected question preview
-                  </h3>
-                  <p className="font-medium text-gray-800">
-                    {selectedQuestion.question || "Untitled question"}
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    {selectedQuestion.answers.map((answer, index) => (
-                      <div
-                        key={`${answer}-${index}`}
-                        className={clsx(
-                          "rounded-md border px-3 py-2 text-sm",
-                          selectedQuestion.solution === index
-                            ? "border-green-500 bg-green-50"
-                            : "border-gray-200",
-                        )}
-                      >
-                        {answer || "(empty answer)"}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 text-sm text-gray-500">
-                    Cooldown: {selectedQuestion.cooldown}s · Time:{" "}
-                    {selectedQuestion.time}s
-                  </div>
-                  {selectedQuestion.image && (
-                    <img
-                      src={selectedQuestion.image}
-                      alt={selectedQuestion.question}
-                      className="mt-3 w-full rounded-md border border-gray-200 object-cover"
-                    />
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-md border border-dashed border-gray-300 p-4 text-sm text-gray-500">
-                  No question selected.
-                </div>
-              )}
             </div>
           </div>
         </section>

@@ -89,8 +89,11 @@ const getSupportedTextModel = async () => {
       continue
     }
 
-    const hasTextOutput = model.architecture?.output_modalities?.includes("text")
-    const isLive = model.providers?.some((provider) => provider.status === "live")
+    const hasTextOutput =
+      model.architecture?.output_modalities?.includes("text")
+    const isLive = model.providers?.some(
+      (provider) => provider.status === "live",
+    )
 
     if (hasTextOutput && isLive) {
       return preferredModel
@@ -98,8 +101,11 @@ const getSupportedTextModel = async () => {
   }
 
   const liveTextModel = payload.data.find((model) => {
-    const hasTextOutput = model.architecture?.output_modalities?.includes("text")
-    const isLive = model.providers?.some((provider) => provider.status === "live")
+    const hasTextOutput =
+      model.architecture?.output_modalities?.includes("text")
+    const isLive = model.providers?.some(
+      (provider) => provider.status === "live",
+    )
 
     return hasTextOutput && isLive
   })
@@ -234,24 +240,30 @@ export async function POST(request: Request) {
     )
   }
 
-  const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${HF_TOKEN}`,
-      "Content-Type": "application/json",
+  const response = await fetch(
+    "https://router.huggingface.co/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HF_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: textModel,
+        messages: [
+          {
+            role: "user",
+            content: buildDraftPrompt(
+              payload.prompt || "",
+              payload.subject || "",
+            ),
+          },
+        ],
+        max_tokens: 1400,
+        temperature: 0.7,
+      }),
     },
-    body: JSON.stringify({
-      model: textModel,
-      messages: [
-        {
-          role: "user",
-          content: buildDraftPrompt(payload.prompt || "", payload.subject || ""),
-        },
-      ],
-      max_tokens: 1400,
-      temperature: 0.7,
-    }),
-  })
+  )
 
   if (!response.ok) {
     const errorPayload = await getJsonError(response)

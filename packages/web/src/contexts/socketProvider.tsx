@@ -21,6 +21,7 @@ type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>
 interface SocketContextValue {
   socket: TypedSocket | null
   webUrl: string | null
+  socketUrl: string | null
   googleClientId: string | null
   isConnected: boolean
   clientId: string
@@ -32,6 +33,7 @@ interface SocketContextValue {
 const SocketContext = createContext<SocketContextValue>({
   socket: null,
   webUrl: null,
+  socketUrl: null,
   googleClientId: null,
   isConnected: false,
   clientId: "",
@@ -65,6 +67,7 @@ const getClientId = (): string => {
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<TypedSocket | null>(null)
   const [webUrl, setWebUrl] = useState<string | null>(null)
+  const [socketUrl, setSocketUrl] = useState<string | null>(null)
   const [googleClientId, setGoogleClientId] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [clientId] = useState<string>(() => getClientId())
@@ -88,6 +91,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         })
 
         setWebUrl(webUrl)
+        setSocketUrl(socketUrl)
         setGoogleClientId(googleClientId || null)
         setSocket(s)
 
@@ -139,6 +143,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         socket,
         webUrl,
+        socketUrl,
         googleClientId,
         isConnected,
         clientId,
